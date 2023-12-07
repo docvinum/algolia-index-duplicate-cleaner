@@ -12,6 +12,17 @@ def get_user_input(prompt):
         else:
             print("Input cannot be empty. Please try again.")
 
+def list_attributes(records):
+    if records:
+        first_record = next(records)
+        print("Attributes in the index records:")
+        for key in first_record.keys():
+            print(f"- {key}")
+        return first_record.keys()
+    else:
+        print("No records found in the index.")
+        return []
+
 # Prompt the user for necessary Algolia account information
 application_id = get_user_input("Enter your Algolia Application ID: ")
 admin_api_key = get_user_input("Enter your Algolia Admin API Key: ")
@@ -35,22 +46,25 @@ while True:
 # Retrieve data from the index
 records = algolia_index.browse_objects({'query': ''})
 
-# Sort and identify duplicates
+# List attributes in the records
+attribute_keys = list_attributes(records)
+
+# Ask the user for attributes to consider for duplicate detection
+print("Enter the attributes (separated by commas) you want to use for detecting duplicates:")
+attributes_for_duplicates = get_user_input("Attributes: ").split(',')
+
+# Logic to sort and identify duplicates based on user-specified attributes
 sorted_records = {}
 duplicates = []
 
 for record in records:
-    url = record['url']
-    date_scraping_str = record['date_scraping']
-    date_scraping = datetime.strptime(date_scraping_str, "%m/%d/%Y, %H:%M:%S")
+    # Create a tuple of values for the specified attributes
+    attribute_values = tuple(record.get(attr.strip()) for attr in attributes_for_duplicates)
     
-    if url in sorted_records and date_scraping <= datetime.strptime(sorted_records[url]['date_scraping'], "%m/%d/%Y, %H:%M:%S"):
+    if attribute_values in sorted_records:
         duplicates.append(record)
-    elif url in sorted_records:
-        duplicates.append(sorted_records[url])
-        sorted_records[url] = record
     else:
-        sorted_records[url] = record
+        sorted_records[attribute_values] = record
 
 # Display the number of duplicates found
 print(f"{len(duplicates)} duplicates found.")
